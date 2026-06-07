@@ -23,7 +23,7 @@ function initHeroCarousel() {
 
   let current = 0;
   let autoplayTimer;
-  const INTERVAL = 5000;
+  const INTERVAL = 8000;
 
   function goTo(index) {
     current = (index + slides.length) % slides.length;
@@ -81,11 +81,46 @@ function initNavigation() {
   const toggle = document.querySelector('.nav-toggle');
   const navLinks = document.querySelector('.nav-links');
 
+  const getScrollTop = () =>
+    window.pageYOffset
+    || document.documentElement.scrollTop
+    || document.body.scrollTop
+    || 0;
+
+  let hasScrolled = false;
+  const SCROLL_THRESHOLD = 40;
+
   const updateHeader = () => {
-    header.classList.toggle('scrolled', window.scrollY > 40);
+    if (getScrollTop() > SCROLL_THRESHOLD) {
+      hasScrolled = true;
+    }
+    header.classList.toggle('scrolled', hasScrolled);
   };
 
-  window.addEventListener('scroll', updateHeader);
+  const closeMenu = () => {
+    navLinks.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const scrollToTarget = (target) => {
+    hasScrolled = true;
+    header.classList.add('scrolled');
+
+    const top = target.getBoundingClientRect().top + getScrollTop();
+
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: 'smooth',
+    });
+  };
+
+  const onScroll = () => {
+    updateHeader();
+    if (navLinks.classList.contains('open')) closeMenu();
+  };
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('scroll', onScroll, { passive: true });
   updateHeader();
 
   toggle.addEventListener('click', () => {
@@ -94,9 +129,20 @@ function initNavigation() {
   });
 
   navLinks.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      navLinks.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
+    link.addEventListener('click', (event) => {
+      const href = link.getAttribute('href');
+
+      if (href && href.startsWith('#') && href.length > 1) {
+        const target = document.querySelector(href);
+        if (target) {
+          event.preventDefault();
+          closeMenu();
+          scrollToTarget(target);
+          return;
+        }
+      }
+
+      closeMenu();
     });
   });
 }
